@@ -1,0 +1,85 @@
+<pre>
+  TBIP: 75
+  Title: bitcoin: URI extensions for better Payment Protocol support and for Bluetooth Communications
+  Authors: Andy Schroder <info@andyschroder.com>, Andreas Schildbach <andreas@schildbach.de>
+  Status: Draft
+  Type: Standards Track
+  Created: 2014-10-17
+</pre>
+
+==Abstract==
+
+This BIP describes an extension to the bitcoin: URI scheme (BIP 21 and BIP 72) to better support the payment protocol (BIP 70) and support Payment Protocol Bluetooth Communication (TBIP 74) and other future communication types.
+
+
+==Motivation==
+
+bitcoin: links do not provide a general way to verify that the payment request received using the BIP 70 "Payment Protocol" matches that of the original bitcoin: URI. Checking that the received payment request matches the bitcoin: URI is desired because the original URI is an anchor that the payer already has some level of trust in and checking that the payment request matches the original bitcoin link can be done automatically. Checking the requested payment address and amount defined in the original payment request URI works for simple payment requests, but is incompatible with more complicated requests. An additional hash of the payment request is included in the URI in order to allow for complicated payment requests, yet still embedding a fingerprint of those request in the original URI for verification.
+
+This improvement also adds an extensible URI parameter rN, which additional URIs to be indicated to the payer's wallet for the payment protocol. This allows a payee to provide payment requests and receive payments using multiple transport mechanisms, while still allowing for backwards compatibility to wallets that may not support newer methods or for users who want to choose a specific transport mechanism. A Bluetooth URI format is defined for wallets to communicate using Bluetooth so that a payer's wallet can submit payments directly to the payee without an internet connection. 
+
+
+==Specification==
+
+===Payment Request Hash===
+
+If an "r" parameter is provided, then an additional "h" parameter may be provided. If provided, it must contain an unpadded Base64Url-encoded SHA256 hash of the PaymentRequest serialized message bytes referred to by the "r" parameter.
+
+When Bitcoin wallet software receives a bitcoin: URI with a "r" and "h" parameters and the hash in the "h" parameter matches the hash of the PaymentRequest message fetched via the "r" parameter, it must ignore the BIP 21 parameters (address, amount, label and message) in the URI and instead follow the payment protocol as described in BIP 70. The software may use any present BIP 21 parameter as a fallback if fetching the PaymentRequest fails, the "h" parameter is missing or the hash doesn't match.
+
+A non-matching hash must be handled identically to a missing "h" parameter, in order to be able to match to different objects in future versions of this spec.
+
+
+===Extensible URI Parameter===
+
+An extensible "rN parameter" is added to allow for multiple transport mechanisms to be defined for the payment protocol. The "N" stands for an integer r parameter number. The original "r parameter" defined in BIP72 is thought of to be "r parameter" number 0, just with the 0 omitted. Additional "r parameters" above the number 0 are defined as &r1=, &r2=, &r3=, ... , &rN=. Lower numbered "r parameters" are to be interpreted as lower priority options by wallets and are provided for backwards compatibility or if a particular transport mechanism is unavailable. A wallet application may give the user an option to manually disabled a certain transport mechanism, which may cause the wallet to fallback to a lower priority transport mechanism. Any "r parameter" number may be used for any transport mechanism, however, use of the original "r parameter" (or "r parameter" number 0, or &r=) for HTTP and HTTPS connections is encouraged for backwards compatibility.
+
+Communication over all transport mechanisms defined by "r parameters" should result in the same data exchange (byte equivalent), therefore the "h" parameter should be valid regardless of the transport mechanism used. In order for this to be possible, in the payment request the payment_url field in the PaymentDetails portion of the PaymentRequest must also be expanded to allow for additional URLs. The same scheme is used for numbering the "r parameters" and the payment_url fields take on the form payment_urlN, where the "N" stands for an integer payment_url number. The original payment_url is thought to be payment_url number 0, just with the 0 omitted. Additional payment_url above the number 0 are defined as payment_url1, payment_url2, payment_url3, ... , payment_urlN. The same number of "r parameters" as payment_url should be supplied in both the bitcoin: URI as well as the payment request and each transport mechanism should use same parameter number for both the "r parameter" and payment_url. The wallet is encouraged to use the same numbered payment_url as "r parameter" (the same transport mechanism) for submitting the payment back to the payee, however, it can use a different transport mechanism if desired (maybe the originally used transport mechanism is no longer available).
+
+
+===Bluetooth URI Parameter and Format===
+
+A Bluetooth URI will be of the format bt:001060B2CE6C/ResourceName, where 001060B2CE6C is a Bluetooth device MAC address in hexadecimal format with the ":" or "-" delimiters between the digits omitted. "/ResourceName" is optional and is the resource's name preceded by a "/", and may be used if a payee is receiving multiple payment request requests from different payers using the same Bluetooth MAC address, Service ID, and Service ID Class. Until specifications for other transport mechanisms are defined, the "r1 parameter" will typically be used with Bluetooth URIs when a backwards compatible HTTP or HTTPs URI is provided.
+
+
+==Backwards Compatibility==
+
+Wallet software that does not support this BIP will simply ignore the r and h parameters that are not understood and will initiate a payment to bitcoin address.
+
+
+==Examples==
+
+A backwards-compatible request:
+
+<pre>
+bitcoin:mq7se9wy2egettFxPbmn99cK8v5AFq55Lx?r=https://merchant.com/pay.php?h%3D2a8628fc2fbe&r1=bt:001060B2CE6C/ResourceName&h=vJuo9BQ2mJh2p3UFIrI1P-fYpkg4w-VyXB7CjtnfoOQ
+</pre>
+
+
+Non-backwards-compatible equivalent:
+
+<pre>
+bitcoin:?r=bt:001060B2CE6C/ResourceName&h=vJuo9BQ2mJh2p3UFIrI1P-fYpkg4w-VyXB7CjtnfoOQ
+</pre>
+
+
+==Limitations==
+
+Although the additional hash parameter does help to provide some additional trust that the payment request being received is valid, it does substitute for checking for a digitally signed payment request, but compliment it. In vending devices that are placed in public or point of sale terminals exposed to untrustworthy employees, a malicious actor could modify the vending device to present both the bitcoin URI with the hash, as well as the payment request, making the payment request appear valid. A diligent payer will also check the digital signature for a valid identity, however, it may be difficult for the payer to swiftly and accurately do so given the number of working names payees may have, as well as the potential for a payee to contract out their payment processing to a third party, as well as the ability to easily obtain a signed signing certificate from a number of certificate authorities without in-depth verification or trust history using the current public key certificate authority infrastructure.
+
+
+==References==
+
+
+[[bip-0021.mediawiki|BIP 0021]] : URI Scheme
+
+[[bip-0070.mediawiki|BIP 0070]] : Payment Protocol
+
+[[bip-0072.mediawiki|BIP 0072]] : Payment Protocol bitcoin: URI extensions
+
+[[tbip-0074.mediawiki|TBIP 0074]] : Payment Protocol Bluetooth Communication
+
+[[https://tools.ietf.org/html/rfc4648#page-7|RFC 4648 - The Base16, Base32, and Base64 Data Encodings]] : Base 64 Encoding with URL and Filename Safe Alphabet
+
+
+

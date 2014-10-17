@@ -1,0 +1,75 @@
+<pre>
+  TBIP: 74
+  Title: Payment Protocol Bluetooth Communication
+  Authors: Andy Schroder <info@andyschroder.com>, Andreas Schildbach <andreas@schildbach.de>
+  Status: Draft
+  Type: Standards Track
+  Created: 2014-10-17
+</pre>
+
+==Abstract==
+
+This BIP defines a method of data exchange for the payment protocol using Bluetooth instead of TCP.
+
+
+==Motivation==
+
+Wallets and wallets, payment terminals or kiosks can operate in a more peer to peer manner using Bluetooth. This allows for quicker and simpler communications without the requirement that the payer have an internet connection on their wallet device in order to make a payment. Many transactions may need to take place in physical locations where no wireless internet connection is available, either because of the merchant's business location or due to the spontaneous nature of the trade. In locations where the payer does not have an internet connection of their own, the ability to receive signed transactions over Bluetooth greatly simplifies over the alternative of the payee providing an internet connection to the payer to connect to the bitcoin network, or the payee's server. Providing an internet connection becomes problematic because it can be difficult restricting its use to just connecting to the bitcoin network if the payee does not want to provide such a service to its customers. Even if a payee does choose to provide an internet connection to the payee, the payer may not wish to deal with the nuisance of connecting and disconnecting to this internet connection just for a simple submission of a signed bitcoin transaction, especially if this provided internet connection has restricted use.
+
+
+==Specification==
+
+
+===Communication Layer===
+
+Communication is established over Bluetooth using RFCOMM. A Bluetooth MAC address and resource name will be presented to the payer using the bitcoin: URI scheme (TBIP 75). This bitcoin: URI may be presented to the payer in a number of ways. The most convenient is presently believed to be Near Field Communication (NFC) because it is quick and does not require a dedicated screen like QR codes do. NFC is also a very short range radio communication which makes it much more difficult for a passive eavesdropper to monitor, and is not visible like a QR code is. The payee will be listening for payment request requests and payments. Payment requests are served on the Bluetooth service with UUID "3357A7BB-762D-464A-8D9A-DCA592D57D59". Payments are received and acknowledged on the Bluetooth service with UUID "3357A7BB-762D-464A-8D9A-DCA592D57D5A". The payee is responsible for advertising the port number that it is listening on for these two services using the "Service Discovery Protocol".
+
+All integers transferred are encoded using the "varint" scheme defined by the "Protocol Buffer" format. Other than the headers, messages in each connection are delimited by an integer indicating the number of bytes of the message that is sent after the delimiter.
+
+
+===Payment Request===
+
+In order to indicate that they would like to receive a payment request from the payee, the payer initiates a connection to the payee using the Bluetooth MAC address and payment request service UUID and sends the integer "0" followed by a delimiter in the "varint" encoding specifying the number of bytes of the resource name. The delimiter is followed by the resource name. The resource name allows a payee to receive multiple payment request requests from different payers using the same Bluetooth MAC address, Service ID, and Service ID Class. The default resource name is "/", and any other resource name is specified by "/ResourceName", where "ResourceName" can be replaced with any string.
+
+Once the payee receives this request, a payment request is then returned using the conventions defined in BIP 70 using the same socket that is already opened. The payment_url defined in the payment request should specify a Bluetooth URI as indicated in TBIP 75, but no resource name is required. Because no resource is required, the merchant_data field should be populated such that the payee can have some unique identifier for the distinguishing between different payers. The response header is the integer "200", using the "varint" encoding. Following the response header is a delimiter in the "varint" encoding specifying the number of bytes of the payment request. Following the delimiter is the serialized payment request in the protocol buffer file format (binary data). After the data has been transferred, the socket is closed.
+
+
+===Payment and Acknowledgement===
+
+The payer can assemble a payment using the conventions defined in BIP 70. The merchant_data field should be populated so that the payment can be distinguished from others. In order for the payer to make a payment without an internet connection, the transactions field(s) must be populated. The payer connects to the payee using the Bluetooth MAC address defined by the payment_url in the payment request and the service UUID for payments. When submitting a payment a delimiter is first submitted, using the "varint" encoding indicating the number of bytes of the payment. Following the delimiter is the serialized payment in the protocol buffer file format (binary data).
+
+Upon receipt of the payment, the payee can follow the procedures defined in BIP 70 and return back a payment acknowledgement (if the payment did indeed satisfy the request) using the same socket that is already open. The payee's payment acknowledgement uses the conventions defined in BIP 70. The acknowledgement begins with a delimiter using the "varint" encoding specifying the number of bytes of the acknowledgement. The delimiter is then followed by the serialized acknowledgement in the protocol buffer file format (binary data). Once the acknowledgement has been sent, the socket is closed.
+
+
+===Wallet Offline Cache===
+
+
+====Blockchain====
+
+The payer's wallet must have an up to date version of blockchain data cached on the device related to the payer's addresses in order to be able to assemble transactions which will actually be valid.
+
+
+====Root Certificates====
+
+The payer's wallet software must have access to up to date copies of root certificate authority certificates. This is typically managed by the underlying operating system that the wallet software runs on.
+
+
+==Drawbacks==
+
+If the payer does not have an internet connection or a radio frequency broadcast of the bitcoin network, the payer cannot verify refunds until an internet connection has been obtained again. Sharing a wallet on another device is not supported in offline mode.
+
+
+==References==
+
+[[bip-0070.mediawiki|BIP 0070]] : Payment Protocol
+
+[[tbip-0075.mediawiki|TBIP 0075]] : bitcoin: URI extensions for better Payment Protocol support and for Bluetooth Communications
+
+[[https://developers.google.com/protocol-buffers/docs/encoding#varints|Encoding - Protocol Buffers]]
+
+
+==Reference Implementation==
+
+[[https://github.com/schildbach/bitcoin-wallet|Bitcoin Wallet]]
+
+

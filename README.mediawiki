@@ -253,6 +253,18 @@ Those proposing changes should consider that ultimately consent may rest with th
 | Stephen Pair
 | Standard
 | Draft
+|-
+| [[tbip-0074.mediawiki|T74]]
+| Payment Protocol Bluetooth Communication
+| Andy Schroder
+| Standard
+| Draft
+|-
+| [[tbip-0075.mediawiki|T75]]
+| bitcoin: URI extensions for better Payment Protocol support and for Bluetooth Communications
+| Andy Schroder
+| Standard
+| Draft
 |}
 
 <!-- IMPORTANT!  See the instructions at the top of this page, do NOT JUST add BIPs here! -->
